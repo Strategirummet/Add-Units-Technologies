@@ -1,0 +1,9 @@
+services:
+  webserver-tool:
+    build:
+      context: ./src
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src/tmp:/app/tmp
