@@ -1,0 +1,13 @@
+[project]
+name = "strategirummet-capacityreconciliation-missingtechnologies"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.128.8",
+    "jinja2>=3.1.6",
+    "pandas>=3.0.0",
+    "python-multipart>=0.0.22",
+    "uvicorn>=0.40.0",
+]
