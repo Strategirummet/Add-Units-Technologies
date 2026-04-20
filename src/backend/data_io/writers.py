@@ -1,30 +1,3 @@
-import pandas as pd
-import numpy as np
-import os
-
-def load_file(path) -> pd.DataFrame:
-    """
-    Loads the file from the given path and returns it as a DataFrame.
-
-    Parameters:
-    path (str): The file path to the Excel file.
-
-    Returns:
-    pd.DataFrame: The loaded data as a DataFrame.
-    """
-    try:
-        excel_file = pd.ExcelFile(path)
-
-        sheet_name = excel_file.sheet_names[0]  # first sheet
-        df = excel_file.parse(sheet_name)
-        df._sheet_name = sheet_name
-
-        return df
-    except Exception as e:
-        print(f"Error loading file from {path}: {e}")
-        raise
-
-
 from __future__ import annotations
 
 from pathlib import Path
@@ -40,31 +13,17 @@ def export_df_to_excel(
     sheet_name: Optional[str] = None,
     highlight_changes: bool = True,
 ) -> None:
-    """
-    Export DataFrame to Excel with optional highlighting.
-
-    Parameters:
-        processed_df: Final DataFrame after processing
-        original_df: Original DataFrame (for comparison)
-        output_path: Full output path (must include filename.xlsx)
-        sheet_name: Sheet name (if None, tries to use original or defaults to 'Sheet1')
-        highlight_changes: Enable/disable highlighting
-    """
-
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Resolve sheet name
     if sheet_name is None:
         sheet_name = getattr(original_df, "_sheet_name", "Sheet1")
 
-    # Find common columns
     common_columns = [
         col for col in processed_df.columns
         if col in original_df.columns
     ]
 
-    # Apply styling only if enabled
     if highlight_changes:
         styled_df = (
             processed_df.style
@@ -83,25 +42,27 @@ def export_df_to_excel(
         styled_df.to_excel(writer, sheet_name=sheet_name, index=False)
 
 
-
-def _style_changed_values(column: pd.Series, original_df: pd.DataFrame):
+def _style_changed_values(
+    column: pd.Series,
+    original_df: pd.DataFrame,
+) -> list[str]:
     if column.name not in original_df.columns:
         return [""] * len(column)
 
-    original = original_df[column.name].reindex(column.index)
+    original_column = original_df[column.name].reindex(column.index)
 
     processed_clean = _normalize_for_comparison(column)
-    original_clean = _normalize_for_comparison(original)
+    original_clean = _normalize_for_comparison(original_column)
 
-    mask = processed_clean != original_clean
+    changed_mask = processed_clean != original_clean
 
     return [
         "background-color: yellow" if changed else ""
-        for changed in mask
+        for changed in changed_mask
     ]
 
 
-def _style_unknown_plant_row(row: pd.Series):
+def _style_unknown_plant_row(row: pd.Series) -> list[str]:
     plant_name = row.get("Plant name", pd.NA)
 
     if pd.notna(plant_name) and str(plant_name).strip() == "Unknown":
@@ -110,7 +71,7 @@ def _style_unknown_plant_row(row: pd.Series):
     return [""] * len(row)
 
 
-def _normalize_for_comparison(series: pd.Series):
+def _normalize_for_comparison(series: pd.Series) -> pd.Series:
     return (
         series.astype("string")
         .fillna("")

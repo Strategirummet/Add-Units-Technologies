@@ -32,37 +32,27 @@ def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 
-
 @router.post("/run")
 async def run(
     background_tasks: BackgroundTasks,
-    required_file: UploadFile = File(...),
-    optional_file: UploadFile | None = File(None),
+    unit_data_file: UploadFile = File(...),
+    plant_capacities_file: UploadFile = File(...),
     svc: FileJobService = Depends(getFileJobService),
 ):
     try:
-        # Call the service use-case (orchestration)
-        # The service:
-        #   - stages temp paths
-        #   - saves upload
-        #   - processes file
-        #   - returns metadata (output path + cleanup paths)
         result = svc.run_job(
-            required_filename=required_file.filename,
-            required_fileobj=required_file.file,
-            optional_filename=optional_file.filename if optional_file else None,
-            optional_fileobj=optional_file.file if optional_file else None,
+            unit_data_filename=unit_data_file.filename,
+            unit_data_fileobj=unit_data_file.file,
+            plant_capacities_filename=plant_capacities_file.filename,
+            plant_capacities_fileobj=plant_capacities_file.file,
         )
-        # --- Must happen after streaming completes ---
-        # Cleanup must be scheduled here (HTTP layer)
-        # because FileResponse streams AFTER this function returns.
-        # We cannot delete files inside the service immediately.
+
         background_tasks.add_task(svc.cleanup, *result.cleanup_paths)
 
         return FileResponse(
             path=str(result.output_path),
             filename=result.download_name,
-            media_type="application/octet-stream",
+            media_type="application/zip",
             background=background_tasks,
         )
     except Exception as e:

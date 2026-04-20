@@ -5,29 +5,7 @@ from pathlib import Path
 import shutil
 import uuid
 
-from tools.processFile import processFile
-
-
-"""
-SERVICE LAYER 
-
-This class orchestrates the workflow:
-
-Upload file → Save to temp → Process → Produce output file
-
-Responsibilities:
-- Decide temp file paths
-- Save uploaded file
-- Call processing logic (tools layer)
-- Return metadata about the job
-
-This layer does NOT:
-- Return HTTP responses
-- Import FastAPI types
-- Know about templates
-"""
-from dataclasses import dataclass
-from pathlib import Path
+from backend.tools.processor import ProcessFileResult, process_file
 
 
 @dataclass(frozen=True)
@@ -37,56 +15,64 @@ class JobResult:
     cleanup_paths: tuple[Path, ...]
 
 
-
 class FileJobService:
-    def __init__(self, tmp_dir: Path):
+    def __init__(self, tmp_dir: Path) -> None:
         self.tmp_dir = tmp_dir
-        self.tmp_dir.mkdir(parents=True, exist_ok=True)
 
-    """
-    Public use-case method.
+    def _stage_paths(self, filename: str, prefix: str) -> tuple[Path, Path]:
+        clean_name = Path(filename).name.strip()
+        if not clean_name:
+            raise ValueError(f"{prefix} filename is empty")
 
-    Orchestrates the entire workflow:
-    1) Stage unique temp paths
-    2) Save required upload
-    3) Save optional upload (if provided)
-    4) Process file(s)
-    5) Return JobResult (output path + cleanup paths)
+        unique_id = uuid.uuid4().hex[:8]
+        stem = Path(clean_name).stem
+        suffix = Path(clean_name).suffix or ".xlsx"
 
-    The route layer is responsible for:
-    - Returning FileResponse
-    - Scheduling cleanup
-    """
+        input_path = self.tmp_dir / f"{prefix}_{unique_id}_{stem}{suffix}"
+        output_path = self.tmp_dir / f"{prefix}_{unique_id}_{stem}_output.xlsx"
+
+        return input_path, output_path
+
+    def _save_upload(self, fileobj, target_path: Path) -> None:
+        with target_path.open("wb") as f:
+            shutil.copyfileobj(fileobj, f)
+
+    def cleanup(self, *paths: Path) -> None:
+        for path in paths:
+            try:
+                if path.exists() and path.is_file():
+                    path.unlink(missing_ok=True)
+            except Exception:
+                pass
+
     def run_job(
         self,
-        required_filename: str,
-        required_fileobj,
-        optional_filename: str | None = None,
-        optional_fileobj=None,
+        unit_data_filename: str,
+        unit_data_fileobj,
+        plant_capacities_filename: str,
+        plant_capacities_fileobj,
     ) -> JobResult:
         cleanup_paths: list[Path] = []
 
-        required_input_path, output_path, _ = self._stage_paths(
-            required_filename,
-            prefix="required",
+        unit_data_input_path, output_path = self._stage_paths(
+            unit_data_filename,
+            prefix="unit",
         )
+        self._save_upload(unit_data_fileobj, unit_data_input_path)
+        cleanup_paths.append(unit_data_input_path)
 
-        self._save_upload(required_fileobj, required_input_path)
-        cleanup_paths.append(required_input_path)
-
-        optional_input_path: Path | None = None
-        if optional_filename is not None and optional_fileobj is not None:
-            optional_input_path, _, _ = self._stage_paths(
-                optional_filename,
-                prefix="optional",
-            )
-            self._save_upload(optional_fileobj, optional_input_path)
-            cleanup_paths.append(optional_input_path)
+        plant_capacities_input_path, _ = self._stage_paths(
+            plant_capacities_filename,
+            prefix="capacity",
+        )
+        self._save_upload(plant_capacities_fileobj, plant_capacities_input_path)
+        cleanup_paths.append(plant_capacities_input_path)
 
         process_result = self._process(
-            required_input_path=required_input_path,
+            unit_data_input_path=unit_data_input_path,
             output_path=output_path,
-            optional_input_path=optional_input_path,
+            plant_capacities_input_path=plant_capacities_input_path,
+            original_unit_filename=unit_data_filename,
         )
 
         cleanup_paths.extend(process_result.artifact_paths)
@@ -99,59 +85,15 @@ class FileJobService:
         )
 
     @staticmethod
-    def cleanup(*paths: Path) -> None:
-        for p in paths:
-            try:
-                if p.exists():
-                    p.unlink()
-                    print(f"Deleted: {p}")
-                else:
-                    print(f"Not found: {p}")
-            except Exception as e:
-                print(f"Failed to delete {p}: {e}")
-
-    @staticmethod
-    def _safe_filename(name: str) -> str:
-        return Path(name).name or "upload.bin"
-
-    def _stage_paths(
-        self,
-        original_filename: str,
-        prefix: str,
-    ) -> tuple[Path, Path, str]:
-        original = self._safe_filename(original_filename)
-        token = uuid.uuid4().hex
-
-        input_path = self.tmp_dir / f"{token}__{prefix}__{original}"
-        download_name = f"processed_{original}"
-        output_path = self.tmp_dir / f"{token}__{download_name}"
-
-        return input_path, output_path, download_name
-
-    @staticmethod
-    def _save_upload(fileobj, input_path: Path) -> None:
-        with input_path.open("wb") as f:
-            shutil.copyfileobj(fileobj, f)
-
-    """
-    Processing boundary.
-
-    Delegates actual transformation to the tools layer.
-    Tools layer performs pure file → file transformation
-    (e.g., pandas logic).
-
-    This method must not contain HTTP logic.
-    """
-    @staticmethod
     def _process(
-        required_input_path: Path,
+        unit_data_input_path: Path,
         output_path: Path,
-        optional_input_path: Path | None = None,
+        plant_capacities_input_path: Path,
+        original_unit_filename: str,
     ) -> ProcessFileResult:
         return process_file(
-            required_input_path=required_input_path,
+            unit_data_input_path=unit_data_input_path,
             output_path=output_path,
-            optional_input_path=optional_input_path,
+            plant_capacities_input_path=plant_capacities_input_path,
+            original_unit_filename=original_unit_filename,
         )
-
-    

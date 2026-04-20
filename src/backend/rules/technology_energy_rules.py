@@ -4,7 +4,7 @@ from typing import Final
 
 import pandas as pd
 
-from rules.base import DataRule, RuleResult
+from backend.rules.base import DataRule, RuleResult
 
 
 def _safe_series(df: pd.DataFrame, column: str) -> pd.Series:
@@ -41,7 +41,7 @@ class ResolveCategoryEnergyTechnology(DataRule):
     - Category is only used when BOTH Energy 1 and Technology are missing
     """
     name = "resolve_category_energy_technology"
-    priority = 20
+    priority = 5
 
     CATEGORY_COLUMN: Final[str] = "Category"
     ENERGY_COLUMN: Final[str] = "Energy 1"
@@ -69,13 +69,17 @@ class ResolveCategoryEnergyTechnology(DataRule):
 
     CATEGORY_TO_DEFAULT_ENERGY: Final[dict[str, str]] = {
         "Thermal": "Oil",
-        "Renewable": "Solar",
+        "Renewables": "Solar",
         "Nuclear": "Nuclear",
         "Storage": "Electricity Storage",
     }
 
-    def apply(self, df: pd.DataFrame) -> tuple[pd.DataFrame, RuleResult]:
-        df = df.copy()
+    def apply(
+        self,
+        state: PipelineState,
+        context: RuleContext,
+    ) -> tuple[PipelineState, RuleResult]:
+        df = state.unit_data_df
 
         old_category = _safe_series(df, self.CATEGORY_COLUMN)
         old_energy = _safe_series(df, self.ENERGY_COLUMN)
@@ -101,7 +105,7 @@ class ResolveCategoryEnergyTechnology(DataRule):
             _count_changed(old_technology, new_technology)
         )
 
-        return df, RuleResult(rule_name=self.name, affected_rows=affected)
+        return RuleResult(rule_name=self.name, affected_rows=affected)
 
     def _fill_energy_from_category_default(self, df: pd.DataFrame) -> None:
         """
