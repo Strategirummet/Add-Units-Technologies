@@ -1,6 +1,10 @@
 # Python
 __pycache__/
+**/__pycache__/
+__pycache_/
+**/__pycache_/
 *.py[cod]
+**/*.py[cod]
 *$py.class
 *.so
 .Python
@@ -21,7 +25,13 @@ wheels/
 *.egg
 MANIFEST
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
 .coverage
+.coverage.*
+htmlcov/
 .env
 .venv
 venv/
