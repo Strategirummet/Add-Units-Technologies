@@ -56,11 +56,11 @@ class ResolveLifecycle(DataRule):
     }
 
     STATUS_FALLBACKS: Final[dict[str, StatusFallback]] = {
-        "Stopped": StatusFallback(commissioning_year=1990, decommissioning_year=None),
-        "Cancelled": StatusFallback(commissioning_year=1990, decommissioning_year=None),
-        "Mothballed": StatusFallback(commissioning_year=1990, decommissioning_year=None),
-        "Frozen": StatusFallback(commissioning_year=1990, decommissioning_year=None),
-        "Suspended construction": StatusFallback(commissioning_year=1990, decommissioning_year=None),
+        "Stopped": StatusFallback(commissioning_year=1900, decommissioning_year=None),
+        "Cancelled": StatusFallback(commissioning_year=1900, decommissioning_year=None),
+        "Mothballed": StatusFallback(commissioning_year=1900, decommissioning_year=None),
+        "Frozen": StatusFallback(commissioning_year=1900, decommissioning_year=None),
+        "Suspended construction": StatusFallback(commissioning_year=1900, decommissioning_year=None),
         "Operational": StatusFallback(commissioning_year=2010, decommissioning_year=None),
         "Submitted": StatusFallback(commissioning_year=2010, decommissioning_year=None),
         "Synchronized": StatusFallback(commissioning_year=2010, decommissioning_year=None),
