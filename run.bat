@@ -10,7 +10,7 @@ echo.
 echo Press CTRL+C to stop the server.
 echo.
 
-docker compose up --build
+docker compose up --build -d
 
 echo.
 echo Application stopped.
