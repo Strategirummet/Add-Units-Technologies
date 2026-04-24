@@ -291,19 +291,28 @@ class CompareAgainstCapacities(DataRule):
             .rename(columns={self.CAPACITY_COLUMN: "CapacityMW_A"})
         )
 
-        # Join against flattened capacities lookup to get B.
-        comparison_df = grouped_a.merge(
-            context.capacities_lookup_df,
-            left_on=[self.COUNTRY_COLUMN, self.BUCKET_COLUMN],
-            right_on=["Country", "ExcelBTechnology"],
+        # Join from Excel B, so only countries/technologies present in Excel B are compared.
+        comparison_df = context.capacities_lookup_df.merge(
+            grouped_a,
+            left_on=["Country", "ExcelBTechnology"],
+            right_on=[self.COUNTRY_COLUMN, self.BUCKET_COLUMN],
             how="left",
         )
+
+        comparison_df[self.COUNTRY_COLUMN] = comparison_df["Country"]
+        comparison_df[self.BUCKET_COLUMN] = comparison_df["ExcelBTechnology"]
+
+        comparison_df["CapacityMW_A"] = pd.to_numeric(
+            comparison_df["CapacityMW_A"], errors="coerce"
+        ).fillna(0.0)
 
         comparison_df["CapacityMW_B"] = pd.to_numeric(
             comparison_df["CapacityMW_B"], errors="coerce"
         ).fillna(0.0)
 
-        comparison_df["DifferenceMW"] = comparison_df["CapacityMW_A"] - comparison_df["CapacityMW_B"]
+        comparison_df["DifferenceMW"] = (
+            comparison_df["CapacityMW_A"] - comparison_df["CapacityMW_B"]
+        )
 
         # Always record every comparison.
         differences_rows = pd.DataFrame(
