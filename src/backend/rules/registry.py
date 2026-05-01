@@ -5,6 +5,7 @@ from backend.rules.comparison_rules import (
     AssignComparisonBuckets,
     CompareAgainstCapacities,
 )
+from backend.rules.clean_up_after_rules import RemoveInternalColumns
 
 
 def get_rules():
@@ -14,4 +15,5 @@ def get_rules():
         MarkEligibleUnits(),
         AssignComparisonBuckets(),
         CompareAgainstCapacities(),
+        RemoveInternalColumns(),
     ]

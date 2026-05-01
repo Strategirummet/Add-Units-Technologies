@@ -15,6 +15,7 @@ from backend.rules.base import PipelineState, RuleContext, ComparisonConfig
 from backend.rules.engine import RuleEngine
 from backend.rules.registry import get_rules
 
+
 def run_pipeline(
     unit_data_df,
     capacities_context: CapacitiesContextData,

@@ -1,4 +1,7 @@
 @echo off
+
+docker compose up --build -d
+
 echo.
 echo ==========================================
 echo   Starting File Processing Web App
@@ -9,8 +12,6 @@ echo http://localhost:8000
 echo.
 echo Press CTRL+C to stop the server.
 echo.
-
-docker compose up --build -d
 
 echo.
 echo Application stopped.
