@@ -14,11 +14,7 @@ def _safe_series(df: pd.DataFrame, column: str) -> pd.Series:
 
 
 def _normalize_text(series: pd.Series) -> pd.Series:
-    return (
-        series.astype("string")
-        .str.strip()
-        .replace({"": pd.NA})
-    )
+    return series.astype("string").str.strip().replace({"": pd.NA})
 
 
 def _count_changed(before: pd.Series, after: pd.Series) -> int:
@@ -40,6 +36,7 @@ class ResolveCategoryEnergyTechnology(DataRule):
     - No reverse Technology -> Energy 1 logic
     - Category is only used when BOTH Energy 1 and Technology are missing
     """
+
     name = "resolve_category_energy_technology"
     priority = 5
 
@@ -60,10 +57,10 @@ class ResolveCategoryEnergyTechnology(DataRule):
         "Marine Energy": "Wave",
         "Nuclear": "PWR",
         "Oil": "Combustion Engine",
-        "Chemical storage": "Battery",
         "Heat": "Combustion Engine",
-        "Electricity Storage": "Battery",
-        "Thermal Storage": "Other thermal",
+        "Chemical storage": "H2 from water electrolysis",
+        "Electricity storage": "Battery",
+        "Thermal storage": "Other thermal",
         "Mechanical storage": "Compressed Air Energy Storage (CAES)",
     }
 
@@ -71,7 +68,7 @@ class ResolveCategoryEnergyTechnology(DataRule):
         "Thermal": "Oil",
         "Renewables": "Solar",
         "Nuclear": "Nuclear",
-        "Storage": "Electricity Storage",
+        "Storage": "Electricity storage",
     }
 
     def apply(
@@ -85,9 +82,13 @@ class ResolveCategoryEnergyTechnology(DataRule):
         old_energy = _safe_series(df, self.ENERGY_COLUMN)
         old_technology = _safe_series(df, self.TECHNOLOGY_COLUMN)
 
-        df[self.CATEGORY_COLUMN] = _normalize_text(_safe_series(df, self.CATEGORY_COLUMN))
+        df[self.CATEGORY_COLUMN] = _normalize_text(
+            _safe_series(df, self.CATEGORY_COLUMN)
+        )
         df[self.ENERGY_COLUMN] = _normalize_text(_safe_series(df, self.ENERGY_COLUMN))
-        df[self.TECHNOLOGY_COLUMN] = _normalize_text(_safe_series(df, self.TECHNOLOGY_COLUMN))
+        df[self.TECHNOLOGY_COLUMN] = _normalize_text(
+            _safe_series(df, self.TECHNOLOGY_COLUMN)
+        )
 
         # Step 1: if both Energy 1 and Technology are missing, use Category default
         self._fill_energy_from_category_default(df)
@@ -100,9 +101,9 @@ class ResolveCategoryEnergyTechnology(DataRule):
         new_technology = df[self.TECHNOLOGY_COLUMN]
 
         affected = (
-            _count_changed(old_category, new_category) +
-            _count_changed(old_energy, new_energy) +
-            _count_changed(old_technology, new_technology)
+            _count_changed(old_category, new_category)
+            + _count_changed(old_energy, new_energy)
+            + _count_changed(old_technology, new_technology)
         )
 
         return RuleResult(rule_name=self.name, affected_rows=affected)
@@ -120,7 +121,9 @@ class ResolveCategoryEnergyTechnology(DataRule):
         if not mask.any():
             return
 
-        mapped_energy = df.loc[mask, self.CATEGORY_COLUMN].map(self.CATEGORY_TO_DEFAULT_ENERGY)
+        mapped_energy = df.loc[mask, self.CATEGORY_COLUMN].map(
+            self.CATEGORY_TO_DEFAULT_ENERGY
+        )
         fill_mask = mapped_energy.notna()
 
         if not fill_mask.any():
@@ -133,19 +136,20 @@ class ResolveCategoryEnergyTechnology(DataRule):
         """
         Fill Technology from Energy 1 when Technology is missing.
         """
-        mask = (
-            df[self.ENERGY_COLUMN].notna()
-            & df[self.TECHNOLOGY_COLUMN].isna()
-        )
+        mask = df[self.ENERGY_COLUMN].notna() & df[self.TECHNOLOGY_COLUMN].isna()
 
         if not mask.any():
             return
 
-        mapped_technology = df.loc[mask, self.ENERGY_COLUMN].map(self.ENERGY_TO_TECHNOLOGY)
+        mapped_technology = df.loc[mask, self.ENERGY_COLUMN].map(
+            self.ENERGY_TO_TECHNOLOGY
+        )
         fill_mask = mapped_technology.notna()
 
         if not fill_mask.any():
             return
 
         target_index = mapped_technology[fill_mask].index
-        df.loc[target_index, self.TECHNOLOGY_COLUMN] = mapped_technology.loc[target_index]
+        df.loc[target_index, self.TECHNOLOGY_COLUMN] = mapped_technology.loc[
+            target_index
+        ]

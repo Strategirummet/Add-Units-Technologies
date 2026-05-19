@@ -143,6 +143,22 @@ class AssignComparisonBuckets(DataRule):
             synthetic_technology="ON_SHORE",
         ),
         ComparisonMapping(
+            category="Renewables",
+            energy_1="Solar",
+            technology="x",
+            excel_b_bucket="Solar",
+            synthetic_name_template="Unknown Solar - {year}",
+            synthetic_technology="PV",
+        ),
+        ComparisonMapping(
+            category="Renewables",
+            energy_1="Geothermal",
+            technology="x",
+            excel_b_bucket="Geothermal",
+            synthetic_name_template="Unknown Geothermal - {year}",
+            synthetic_technology="BINARY CYCLE",
+        ),
+        ComparisonMapping(
             category="Thermal",
             energy_1="Coal",
             technology="x",
@@ -175,22 +191,6 @@ class AssignComparisonBuckets(DataRule):
             synthetic_technology="SUBCRITICAL",
         ),
         ComparisonMapping(
-            category="Renewables",
-            energy_1="Solar",
-            technology="x",
-            excel_b_bucket="Solar",
-            synthetic_name_template="Unknown Solar - {year}",
-            synthetic_technology="PV",
-        ),
-        ComparisonMapping(
-            category="Renewables",
-            energy_1="Geothermal",
-            technology="x",
-            excel_b_bucket="Geothermal",
-            synthetic_name_template="Unknown Geothermal - {year}",
-            synthetic_technology="BINARY CYCLE",
-        ),
-        ComparisonMapping(
             category="Storage",
             energy_1="Chemical storage",
             technology="x",
@@ -205,6 +205,14 @@ class AssignComparisonBuckets(DataRule):
             excel_b_bucket="Batteries",
             synthetic_name_template="Unknown Battery - {year}",
             synthetic_technology="BATTERY",
+        ),
+        ComparisonMapping(
+            category="Nuclear",
+            energy_1="Nuclear",
+            technology="x",
+            excel_b_bucket="Nuclear",
+            synthetic_name_template="Unknown Nuclear - {year}",
+            synthetic_technology="PWR",
         ),
     ]
 
@@ -441,12 +449,19 @@ class CompareAgainstCapacities(DataRule):
             == _norm_lower(bucket)
         ]
 
-        # No fallback to another tech.
+        # Priority 1: zone from matching country + bucket.
+        # Priority 2: zone from any other plant in the same country.
         zone = pd.NA
 
         if not bucket_rows.empty:
             zone_series = (
                 bucket_rows[self.ZONE_COLUMN].dropna().astype("string").str.strip()
+            )
+            zone = zone_series.iloc[0] if not zone_series.empty else pd.NA
+
+        if pd.isna(zone) and not country_rows.empty:
+            zone_series = (
+                country_rows[self.ZONE_COLUMN].dropna().astype("string").str.strip()
             )
             zone = zone_series.iloc[0] if not zone_series.empty else pd.NA
 
