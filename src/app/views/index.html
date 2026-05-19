@@ -1,0 +1,26 @@
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Upload + Download</title>
+</head>
+
+<body style="font-family: sans-serif; max-width: 640px; margin: 40px auto;">
+    <h2>Upload file(s)</h2>
+
+    <form action="/run" method="post" enctype="multipart/form-data">
+        <div style="margin-bottom: 12px;">
+            <label for="unit_data_file">Required file:</label><br />
+            <input type="file" id="unit_data_file" name="unit_data_file" required />
+        </div>
+
+        <div style="margin-bottom: 12px;">
+            <label for="plant_capacities_file">Plant capacities file:</label><br />
+            <input type="file" id="plant_capacities_file" name="plant_capacities_file" />
+        </div>
+
+        <button type="submit">Upload & Download</button>
+    </form>
+</body>
+
+</html>
