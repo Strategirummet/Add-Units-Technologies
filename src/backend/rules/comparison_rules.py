@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Final
+import json
+from pathlib import Path
 
 import pandas as pd
 
@@ -137,10 +139,18 @@ class AssignComparisonBuckets(DataRule):
         ComparisonMapping(
             category="Renewables",
             energy_1="Wind",
-            technology="x",
-            excel_b_bucket="Wind",
-            synthetic_name_template="Unknown Wind - {year}",
+            technology="On-shore",
+            excel_b_bucket="Onshore Wind",
+            synthetic_name_template="Unknown OnShore Wind - {year}",
             synthetic_technology="ON_SHORE",
+        ),
+        ComparisonMapping(
+            category="Renewables",
+            energy_1="Wind",
+            technology="Off-shore",
+            excel_b_bucket="Offshore Wind",
+            synthetic_name_template="Unknown OffShore Wind - {year}",
+            synthetic_technology="OFF_SHORE",
         ),
         ComparisonMapping(
             category="Renewables",
@@ -213,6 +223,22 @@ class AssignComparisonBuckets(DataRule):
             excel_b_bucket="Nuclear",
             synthetic_name_template="Unknown Nuclear - {year}",
             synthetic_technology="PWR",
+        ),
+        ComparisonMapping(
+            category="Storage",
+            energy_1="Thermal storage",
+            technology="Heat pump",
+            excel_b_bucket="Heat Pump",
+            synthetic_name_template="Unknown Thermal Storage - {year}",
+            synthetic_technology="Heat pump",
+        ),
+        ComparisonMapping(
+            category="Storage",
+            energy_1="Thermal storage",
+            technology="Other thermal",
+            excel_b_bucket="Other thermal",
+            synthetic_name_template="Unknown Other Thermal - {year}",
+            synthetic_technology="Other thermal",
         ),
     ]
 
@@ -403,6 +429,7 @@ class CompareAgainstCapacities(DataRule):
                 bucket=bucket,
                 missing_capacity=b_capacity - a_capacity,
                 synthetic_commissioning_year=context.synthetic_commissioning_year,
+                synthetic_sum_year=context.sum_year,
             )
 
             if synthetic_row is None:
@@ -431,6 +458,7 @@ class CompareAgainstCapacities(DataRule):
         bucket: str,
         missing_capacity: float,
         synthetic_commissioning_year: int,
+        synthetic_sum_year: int,
     ) -> dict | None:
         country_rows = unit_df[
             unit_df[self.COUNTRY_COLUMN].astype("string").str.strip().str.lower()
@@ -472,12 +500,10 @@ class CompareAgainstCapacities(DataRule):
         synthetic_technology = mapping.synthetic_technology
         name_template = mapping.synthetic_name_template
 
-        plant_name = name_template.format(year=synthetic_commissioning_year)
+        plant_name = name_template.format(year=synthetic_sum_year)
 
         city, city_latitude, city_longitude = self._get_city_data_from_largest_plant(
-            unit_df=unit_df,
-            country=country,
-            bucket=bucket,
+            unit_df=unit_df, country=country, bucket=bucket, use_bucket_filter=True
         )
 
         new_row = {column: pd.NA for column in unit_df.columns}
@@ -520,89 +546,48 @@ class CompareAgainstCapacities(DataRule):
 
         return None
 
-    def _get_city_data_from_largest_plant(
-        self,
-        unit_df: pd.DataFrame,
-        country: str,
-        bucket: str,
+    @staticmethod
+    def _load_capitals() -> dict[str, str]:
+        json_path = (
+            Path(__file__).parent.parent / "data" / "country-by-capital-city.json"
+        )
+        with json_path.open(encoding="utf-8") as f:
+            raw = json.load(f)
+        return {
+            entry["country"].strip().lower(): entry["city"]
+            for entry in raw
+            if entry.get("city") is not None
+        }
+
+    _COUNTRY_CAPITALS: ClassVar[dict[str, str]] = _load_capitals.__func__()
+
+    def _capital_fallback(
+        self, country: str
     ) -> tuple[str | None, float | None, float | None]:
-        mapping = self._get_mapping_for_bucket(bucket)
-        if mapping is None:
-            return None, None, None
-
-        df = unit_df[
-            unit_df[self.COUNTRY_COLUMN].astype("string").str.strip().str.lower()
-            == _norm_lower(country)
-        ].copy()
-
-        if df.empty:
-            return None, None, None
-
-        if self.IS_ADDED_COLUMN in df.columns:
-            df = df[~df[self.IS_ADDED_COLUMN].fillna(False)]
-
-        if df.empty:
-            return None, None, None
-
-        city_series = df.get(self.CITY_COLUMN, pd.Series(pd.NA, index=df.index))
-        lat_series = df.get(self.CITY_LATITUDE_COLUMN, pd.Series(pd.NA, index=df.index))
-        lon_series = df.get(
-            self.CITY_LONGITUDE_COLUMN, pd.Series(pd.NA, index=df.index)
+        key = _norm_lower(country)
+        print(
+            f"[capital_fallback] looking up key='{key}', found={self._COUNTRY_CAPITALS.get(key)}, total keys={len(self._COUNTRY_CAPITALS)}"
         )
-
-        has_city = city_series.notna() & city_series.astype("string").str.strip().ne("")
-        has_coords = lat_series.notna() & lon_series.notna()
-
-        df = df[has_city | has_coords].copy()
-
-        if df.empty:
+        capital = self._COUNTRY_CAPITALS.get(key)
+        if capital is None:
             return None, None, None
+        return capital, None, None
 
-        for col in [
-            self.CATEGORY_COLUMN,
-            self.ENERGY_1_COLUMN,
-            self.TECHNOLOGY_COLUMN,
-        ]:
-            if col not in df.columns:
-                df[col] = pd.NA
-
-        category_series = (
-            df[self.CATEGORY_COLUMN].astype("string").str.strip().str.lower()
+    def _pick_city_from_df(
+        self,
+        df: pd.DataFrame,
+        country: str,
+    ) -> tuple[str | None, float | None, float | None]:
+        df = df.copy()
+        df[self.CAPACITY_COLUMN] = pd.to_numeric(
+            df[self.CAPACITY_COLUMN], errors="coerce"
         )
-        energy_series = (
-            df[self.ENERGY_1_COLUMN].astype("string").str.strip().str.lower()
-        )
-        tech_series = (
-            df[self.TECHNOLOGY_COLUMN].astype("string").str.strip().str.lower()
-        )
+        df = df[df[self.CAPACITY_COLUMN].notna()]
 
-        match_mask = category_series == _norm_lower(mapping.category)
+        #if df.empty:
+        #    return self._capital_fallback(country)
 
-        if _norm_lower(mapping.energy_1) != "x":
-            match_mask = match_mask & (energy_series == _norm_lower(mapping.energy_1))
-
-        if _norm_lower(mapping.technology) != "x":
-            match_mask = match_mask & (tech_series == _norm_lower(mapping.technology))
-
-        matched_rows = df[match_mask].copy()
-
-        if matched_rows.empty:
-            return None, None, None
-
-        matched_rows[self.CAPACITY_COLUMN] = pd.to_numeric(
-            matched_rows[self.CAPACITY_COLUMN],
-            errors="coerce",
-        )
-
-        matched_rows = matched_rows[matched_rows[self.CAPACITY_COLUMN].notna()]
-
-        if matched_rows.empty:
-            return None, None, None
-
-        best_row = matched_rows.sort_values(
-            by=self.CAPACITY_COLUMN,
-            ascending=False,
-        ).iloc[0]
+        best_row = df.sort_values(by=self.CAPACITY_COLUMN, ascending=False).iloc[0]
 
         city = best_row.get(self.CITY_COLUMN, pd.NA)
         lat = best_row.get(self.CITY_LATITUDE_COLUMN, pd.NA)
@@ -612,4 +597,94 @@ class CompareAgainstCapacities(DataRule):
         lat = None if pd.isna(lat) else float(lat)
         lon = None if pd.isna(lon) else float(lon)
 
+        #if city is None:
+        #    return self._capital_fallback(country)
+
         return city, lat, lon
+
+    def _get_city_data_from_largest_plant(
+        self,
+        unit_df: pd.DataFrame,
+        country: str,
+        bucket: str,
+        use_bucket_filter: bool = False,
+    ) -> tuple[str | None, float | None, float | None]:
+        mapping = self._get_mapping_for_bucket(bucket)
+        if mapping is None:
+            return None, None, None
+
+        # Step 1: filter to country, exclude synthetic rows.
+        df = unit_df[
+            unit_df[self.COUNTRY_COLUMN].astype("string").str.strip().str.lower()
+            == _norm_lower(country)
+        ].copy()
+
+        #if df.empty:
+        #    return self._capital_fallback(country)
+
+        if self.IS_ADDED_COLUMN in df.columns:
+            df = df[~df[self.IS_ADDED_COLUMN].fillna(False)]
+
+        #if df.empty:
+        #    return self._capital_fallback(country)
+
+        # Step 2: filter to rows with a non-empty city name.
+        city_series = df.get(self.CITY_COLUMN, pd.Series(pd.NA, index=df.index))
+        has_city = city_series.notna() & city_series.astype("string").str.strip().ne("")
+        country_city_df = df[has_city].copy()
+
+        # Step 3: if nothing has a city at all, go straight to capital.
+        #if country_city_df.empty:
+        #    return self._capital_fallback(country)
+        
+        # Step 4: filter further to matching bucket/tech.
+        if use_bucket_filter:
+            for col in [
+                self.CATEGORY_COLUMN,
+                self.ENERGY_1_COLUMN,
+                self.TECHNOLOGY_COLUMN,
+            ]:
+                if col not in country_city_df.columns:
+                    country_city_df[col] = pd.NA
+
+            category_series = (
+                country_city_df[self.CATEGORY_COLUMN]
+                .astype("string")
+                .str.strip()
+                .str.lower()
+            )
+            energy_series = (
+                country_city_df[self.ENERGY_1_COLUMN]
+                .astype("string")
+                .str.strip()
+                .str.lower()
+            )
+            tech_series = (
+                country_city_df[self.TECHNOLOGY_COLUMN]
+                .astype("string")
+                .str.strip()
+                .str.lower()
+            )
+
+            match_mask = category_series == _norm_lower(mapping.category)
+
+            if _norm_lower(mapping.energy_1) != "x":
+                match_mask = match_mask & (
+                    energy_series == _norm_lower(mapping.energy_1)
+                )
+
+            if _norm_lower(mapping.technology) != "x":
+                match_mask = match_mask & (
+                    tech_series == _norm_lower(mapping.technology)
+                )
+
+            bucket_city_df = country_city_df[match_mask].copy()
+            
+            # Step 5a: bucket match found, pick largest.
+            if not bucket_city_df.empty:
+                return self._pick_city_from_df(bucket_city_df, country)
+
+            # Step 5b: bucket filter yielded nothing, fall through to country-only.
+
+        # Step 6: pick largest from any plant in the country that has a city.
+        return self._pick_city_from_df(country_city_df, country)
