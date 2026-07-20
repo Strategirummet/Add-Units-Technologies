@@ -228,7 +228,7 @@ class AssignComparisonBuckets(DataRule):
             category="Storage",
             energy_1="Thermal storage",
             technology="Heat pump",
-            excel_b_bucket="Heat Pump",
+            excel_b_bucket="Heat pump",
             synthetic_name_template="Unknown Heat Pump - {year}",
             synthetic_technology="Heat pump",
         ),
