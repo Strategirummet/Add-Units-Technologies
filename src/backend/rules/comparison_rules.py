@@ -226,7 +226,7 @@ class AssignComparisonBuckets(DataRule):
         ),
         ComparisonMapping(
             category="Storage",
-            energy_1="Thermal storage",
+            energy_1="Storage",
             technology="Heat pump",
             excel_b_bucket="Heat pump",
             synthetic_name_template="Unknown Heat Pump - {year}",
@@ -234,11 +234,11 @@ class AssignComparisonBuckets(DataRule):
         ),
         ComparisonMapping(
             category="Storage",
-            energy_1="Thermal storage",
-            technology="Other thermal",
-            excel_b_bucket="Other thermal",
-            synthetic_name_template="Unknown Other Thermal - {year}",
-            synthetic_technology="Other thermal",
+            energy_1="Storage",
+            technology="Thermal",
+            excel_b_bucket="Thermal",
+            synthetic_name_template="Unknown Thermal - {year}",
+            synthetic_technology="Thermal",
         ),
     ]
 
