@@ -229,7 +229,7 @@ class AssignComparisonBuckets(DataRule):
             energy_1="Thermal storage",
             technology="Heat pump",
             excel_b_bucket="Heat Pump",
-            synthetic_name_template="Unknown Thermal Storage - {year}",
+            synthetic_name_template="Unknown Heat Pump - {year}",
             synthetic_technology="Heat pump",
         ),
         ComparisonMapping(
@@ -584,7 +584,7 @@ class CompareAgainstCapacities(DataRule):
         )
         df = df[df[self.CAPACITY_COLUMN].notna()]
 
-        #if df.empty:
+        # if df.empty:
         #    return self._capital_fallback(country)
 
         best_row = df.sort_values(by=self.CAPACITY_COLUMN, ascending=False).iloc[0]
@@ -597,7 +597,7 @@ class CompareAgainstCapacities(DataRule):
         lat = None if pd.isna(lat) else float(lat)
         lon = None if pd.isna(lon) else float(lon)
 
-        #if city is None:
+        # if city is None:
         #    return self._capital_fallback(country)
 
         return city, lat, lon
@@ -619,13 +619,13 @@ class CompareAgainstCapacities(DataRule):
             == _norm_lower(country)
         ].copy()
 
-        #if df.empty:
+        # if df.empty:
         #    return self._capital_fallback(country)
 
         if self.IS_ADDED_COLUMN in df.columns:
             df = df[~df[self.IS_ADDED_COLUMN].fillna(False)]
 
-        #if df.empty:
+        # if df.empty:
         #    return self._capital_fallback(country)
 
         # Step 2: filter to rows with a non-empty city name.
@@ -634,9 +634,9 @@ class CompareAgainstCapacities(DataRule):
         country_city_df = df[has_city].copy()
 
         # Step 3: if nothing has a city at all, go straight to capital.
-        #if country_city_df.empty:
+        # if country_city_df.empty:
         #    return self._capital_fallback(country)
-        
+
         # Step 4: filter further to matching bucket/tech.
         if use_bucket_filter:
             for col in [
@@ -679,7 +679,7 @@ class CompareAgainstCapacities(DataRule):
                 )
 
             bucket_city_df = country_city_df[match_mask].copy()
-            
+
             # Step 5a: bucket match found, pick largest.
             if not bucket_city_df.empty:
                 return self._pick_city_from_df(bucket_city_df, country)
