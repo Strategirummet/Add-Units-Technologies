@@ -126,7 +126,7 @@ class AssignComparisonBuckets(DataRule):
             technology="Run-of-river",
             excel_b_bucket="Hydro (Run-of-River)",
             synthetic_name_template="Unknown Hydro Run-of-river - {year}",
-            synthetic_technology="RUN_OF_RIVER",
+            synthetic_technology="Run-of-river",
         ),
         ComparisonMapping(
             category="Renewables",
@@ -134,7 +134,7 @@ class AssignComparisonBuckets(DataRule):
             technology="Dam",
             excel_b_bucket="Hydro (Dam)",
             synthetic_name_template="Unknown Hydro Dam - {year}",
-            synthetic_technology="DAM",
+            synthetic_technology="Dam",
         ),
         ComparisonMapping(
             category="Renewables",
@@ -142,7 +142,7 @@ class AssignComparisonBuckets(DataRule):
             technology="On-shore",
             excel_b_bucket="Onshore Wind",
             synthetic_name_template="Unknown OnShore Wind - {year}",
-            synthetic_technology="ON_SHORE",
+            synthetic_technology="On-shore",
         ),
         ComparisonMapping(
             category="Renewables",
@@ -150,7 +150,7 @@ class AssignComparisonBuckets(DataRule):
             technology="Off-shore",
             excel_b_bucket="Offshore Wind",
             synthetic_name_template="Unknown OffShore Wind - {year}",
-            synthetic_technology="OFF_SHORE",
+            synthetic_technology="Off-shore",
         ),
         ComparisonMapping(
             category="Renewables",
@@ -166,7 +166,7 @@ class AssignComparisonBuckets(DataRule):
             technology="x",
             excel_b_bucket="Geothermal",
             synthetic_name_template="Unknown Geothermal - {year}",
-            synthetic_technology="BINARY CYCLE",
+            synthetic_technology="Binary cycle",
         ),
         ComparisonMapping(
             category="Thermal",
@@ -174,7 +174,7 @@ class AssignComparisonBuckets(DataRule):
             technology="x",
             excel_b_bucket="Coal",
             synthetic_name_template="Unknown Coal - {year}",
-            synthetic_technology="SUBCRITICAL",
+            synthetic_technology="Subcritical",
         ),
         ComparisonMapping(
             category="Thermal",
@@ -182,7 +182,7 @@ class AssignComparisonBuckets(DataRule):
             technology="x",
             excel_b_bucket="Gas",
             synthetic_name_template="Unknown Gas - {year}",
-            synthetic_technology="COMBUSTION_ENGINE",
+            synthetic_technology="Combustion engine",
         ),
         ComparisonMapping(
             category="Thermal",
@@ -190,7 +190,7 @@ class AssignComparisonBuckets(DataRule):
             technology="x",
             excel_b_bucket="Oil",
             synthetic_name_template="Unknown Oil - {year}",
-            synthetic_technology="COMBUSTION_ENGINE",
+            synthetic_technology="Combustion engine",
         ),
         ComparisonMapping(
             category="Thermal",
@@ -198,7 +198,7 @@ class AssignComparisonBuckets(DataRule):
             technology="x",
             excel_b_bucket="Biomass",
             synthetic_name_template="Unknown Biomass - {year}",
-            synthetic_technology="SUBCRITICAL",
+            synthetic_technology="Subcritical",
         ),
         ComparisonMapping(
             category="Storage",
@@ -206,7 +206,7 @@ class AssignComparisonBuckets(DataRule):
             technology="x",
             excel_b_bucket="PtX",
             synthetic_name_template="Unknown PtX - {year}",
-            synthetic_technology="H2 FROM WATER ELECTROLYSIS",
+            synthetic_technology="H2 from water electrolysis",
         ),
         ComparisonMapping(
             category="Storage",
@@ -214,7 +214,7 @@ class AssignComparisonBuckets(DataRule):
             technology="x",
             excel_b_bucket="Batteries",
             synthetic_name_template="Unknown Battery - {year}",
-            synthetic_technology="BATTERY",
+            synthetic_technology="Battery",
         ),
         ComparisonMapping(
             category="Nuclear",
