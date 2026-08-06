@@ -169,6 +169,14 @@ class AssignComparisonBuckets(DataRule):
             synthetic_technology="Binary cycle",
         ),
         ComparisonMapping(
+                    category="Renewables",
+                    energy_1="Hydrogen",
+                    technology="x",
+                    excel_b_bucket="Hydrogen",
+                    synthetic_name_template="Unknown Hydrogen - {year}",
+                    synthetic_technology="Fuel Cell",
+                ),
+        ComparisonMapping(
             category="Thermal",
             energy_1="Coal",
             technology="x",
@@ -412,8 +420,9 @@ class CompareAgainstCapacities(DataRule):
             country = _norm(row[self.COUNTRY_COLUMN])
             bucket = _norm(row[self.BUCKET_COLUMN])
 
-            if b_capacity == 0:
+            if b_capacity < 1:
                 continue
+
 
             if a_capacity >= b_capacity:
                 continue
