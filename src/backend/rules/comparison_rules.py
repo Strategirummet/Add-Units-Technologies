@@ -67,19 +67,25 @@ class MarkEligibleUnits(DataRule):
             df[self.DECOMMISSIONING_COLUMN], errors="coerce"
         )
         commissioning = pd.to_numeric(df[self.COMMISSIONING_COLUMN], errors="coerce")
-
+        has_commissioning = commissioning.notna()
         has_decommissioning = decommissioning.notna()
+        lifetime_years = df.apply(self._lifetime_for_row, axis=1)
+        commissioning = commissioning.mask(
+        ~has_commissioning & has_decommissioning,
+        decommissioning - lifetime_years)
+        commissioning = commissioning.fillna(2010)
+        decommissioning = decommissioning.mask(
+                ~has_decommissioning & has_commissioning,
+                commissioning + lifetime_years)
+
         decommissioning_ok = decommissioning > context.sum_year
 
-        # Lifetime rule when decommissioning year is missing.
-        lifetime_years = df.apply(self._lifetime_for_row, axis=1)
         threshold_year = context.sum_year - lifetime_years
 
         commissioning_ok = commissioning.notna() & (commissioning >= threshold_year)
 
         eligible = status_ok & (
-            (has_decommissioning & decommissioning_ok)
-            | (~has_decommissioning & commissioning_ok)
+            (decommissioning_ok & commissioning_ok)
         )
 
         previous = (
@@ -429,7 +435,7 @@ class CompareAgainstCapacities(DataRule):
 
             gap_percent = (b_capacity - a_capacity) / b_capacity
 
-            if gap_percent <= context.comparison_config.gap_percent_threshold:
+            if gap_percent <= context.comparison_config.gap_percent_threshold and (b_capacity - a_capacity) <100:
                 continue
 
             synthetic_row = self._build_synthetic_row(
